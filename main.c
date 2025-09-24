@@ -94,25 +94,41 @@ SDL_Surface* equalizeHistogram(SDL_Surface *src) {
 }
 
 void drawHistogram(SDL_Renderer *ren, int hist[256]) {
+  
     SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
     SDL_RenderClear(ren);
 
+    
     int maxVal = 1;
-    for (int i = 0; i < 256; i++) if (hist[i] > maxVal) maxVal = hist[i];
+    for (int i = 0; i < 256; i++)
+        if (hist[i] > maxVal) maxVal = hist[i];
 
-    int margin = 20;
-    int usableHeight = HIST_H - 2 * margin;
+    const float marginX = 16.0f;
+    const float marginY = 20.0f;
+    const float areaW   = (float)HIST_W - 2.0f * marginX;
+    const float areaH   = (float)HIST_H - 2.0f * marginY;
 
+    // linha de base (eixo X)
+    SDL_SetRenderDrawColor(ren, 220, 220, 220, 255);
+    SDL_RenderLine(ren, marginX, HIST_H - marginY, HIST_W - marginX, HIST_H - marginY);
+
+    const float step     = areaW / 256.0f;
+    float       barWidth = step;
+    if (barWidth < 2.0f) barWidth = 2.0f;   
+
+    SDL_SetRenderDrawColor(ren, 200, 200, 200, 255);
     for (int i = 0; i < 256; i++) {
-        int h = (hist[i] * usableHeight) / maxVal;
-        SDL_SetRenderDrawColor(ren, 255, 255, 255, 255);
-        SDL_RenderLine(
-            ren,
-            i * HIST_W / 256, HIST_H - margin,
-            i * HIST_W / 256, HIST_H - margin - h
-        );
+        float norm = (maxVal > 0) ? (logf(1.0f + hist[i]) / logf(1.0f + maxVal)) : 0.0f;
+        float h    = norm * areaH;
+        float x    = marginX + i * step;
+
+        SDL_FRect bar = { x, HIST_H - marginY - h, barWidth, h };
+        SDL_RenderFillRect(ren, &bar);
     }
 }
+
+
+
 
 // ---------- Botão ----------
 
@@ -177,7 +193,6 @@ int main(int argc, char* argv[]) {
     }
 
     SDL_Init(SDL_INIT_VIDEO);
-    IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG);
     TTF_Init();
 
     SDL_Surface *image = IMG_Load(argv[1]);
@@ -266,7 +281,6 @@ int main(int argc, char* argv[]) {
     SDL_DestroySurface(equalized);
     TTF_CloseFont(font);
     TTF_Quit();
-    IMG_Quit();
     SDL_Quit();
     return 0;
 }
